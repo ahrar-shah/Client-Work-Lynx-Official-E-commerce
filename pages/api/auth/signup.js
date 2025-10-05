@@ -1,39 +1,48 @@
-// Signup: stores user in GitHub under data/users/<email>.json
-import { createOrUpdateFile, getFile } from '../../../utils/functions';
-import { signToken } from '../../../utils/jwt';
+// pages/api/auth/signup.js
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { createOrUpdateFile } from "../../../utils/functions"; // path adjust karo
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
-
-  const { name, email, password } = req.body;
-  if (!email || !password || !name) {
-    return res.status(400).json({ error: 'Missing fields' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const path = `data/users/${email}.json`;
-  const existing = await getFile(path);
-  if (existing) {
-    return res.status(400).json({ error: 'User already exists' });
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // user object
+    const userData = {
+      name,
+      email,
+      password: hashedPassword,
+      createdAt: new Date().toISOString(),
+    };
+
+    // save user file in GitHub repo
+    await createOrUpdateFile(
+      `data/users/${email.replace(/[@.]/g, "_")}.json`,
+      Buffer.from(JSON.stringify(userData, null, 2)).toString("base64"),
+      `Add user ${email}`
+    );
+
+    // create JWT token
+    const token = jwt.sign(
+      { email: userData.email },
+      process.env.JWT_SECRET || "defaultsecret",
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json({ ok: true, token });
+  } catch (error) {
+    console.error("Signup error:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
-
-  const user = {
-    name,
-    email,
-    password, // NOTE: store hashed in production
-    createdAt: new Date().toISOString(),
-    isAdmin: false,
-  };
-
-  const contentBase64 = Buffer.from(JSON.stringify(user, null, 2)).toString('base64');
-  await createOrUpdateFile(path, contentBase64, `Add user ${email}`);
-
-  const token = signToken({ email, name, isAdmin: false });
-
-  // set httpOnly cookie
-  res.setHeader(
-    'Set-Cookie',
-    `lynx_token=${token}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 7}`
-  );
-
-  return res.json({ ok: true, user: { name, email } });
 }
