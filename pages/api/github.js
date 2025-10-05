@@ -2,7 +2,7 @@
  * To show images on frontend, we expose a small endpoint that fetches the file from GitHub (base64)
  * and returns it with correct content-type.
  */
-import { getFile } from '../../utils/githubClient';
+import { getFile } from '../../utils/githubclient';
 
 export default async function handler(req, res) {
   const { path } = req.query;
