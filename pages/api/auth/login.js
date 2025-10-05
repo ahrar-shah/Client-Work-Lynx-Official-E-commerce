@@ -1,4 +1,4 @@
-import { getFile } from '../../utils/githubClient';
+import { getFile } from '../../utils/githubclient';
 import { signToken } from '../../../utils/jwt';
 
 export default async function handler(req, res) {
