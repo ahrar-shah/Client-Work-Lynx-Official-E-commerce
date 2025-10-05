@@ -1,4 +1,4 @@
-import { createOrUpdateFile } from '../utils/githubclient';
+import { createOrUpdateFile } from '../utils/github_api_client';
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
