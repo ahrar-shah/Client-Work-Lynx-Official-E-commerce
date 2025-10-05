@@ -12,9 +12,12 @@ export default async function handler(req, res) {
   if (!name || !email || !message) return res.status(400).json({ error: 'Missing fields' });
 
   const contact = { name, email, subject, message, createdAt: new Date().toISOString() };
-  await createOrUpdateFile(`data/contacts/${Date.now()}-${email}.json`, Buffer.from(JSON.stringify(contact, null, 2)).toString('base64'), `Add contact from ${email}`);
+  await createOrUpdateFile(
+    `data/contacts/${Date.now()}-${email}.json`,
+    Buffer.from(JSON.stringify(contact, null, 2)).toString('base64'),
+    `Add contact from ${email}`
+  );
 
-  // Notify admin and reply-to is user's email
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -29,3 +32,4 @@ export default async function handler(req, res) {
 
   res.json({ ok: true });
 }
+
