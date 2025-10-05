@@ -3,7 +3,7 @@
  * GET: admin list orders (requires admin)
  * PATCH: admin update order status (approve/disapprove)
  */
-import { getFile, createOrUpdateFile, listDir } from '../utils/github_api_client';
+import { getFile, createOrUpdateFile, listDir } from '../utils/functions';
 import { verifyToken } from '../../utils/jwt';
 import nodemailer from 'nodemailer';
 
