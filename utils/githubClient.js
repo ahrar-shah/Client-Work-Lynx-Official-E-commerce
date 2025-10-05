@@ -1,60 +1,79 @@
-/**
- * Minimal GitHub Contents API client for read/write files.
- * Uses GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH env vars.
- */
-import fetch from 'node-fetch';
-const API_ROOT = 'https://api.github.com';
+// utils/githubClient.js
+import fetch from "node-fetch";
 
-const OWNER = process.env.GITHUB_OWNER;
-const REPO = process.env.GITHUB_REPO;
-const BRANCH = process.env.GITHUB_BRANCH || 'main';
-const TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_OWNER = process.env.GITHUB_OWNER;
+const GITHUB_REPO = process.env.GITHUB_REPO;
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
 
-if (!TOKEN) {
-  console.warn('GITHUB_TOKEN not set — GitHub operations will fail');
+if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
+  throw new Error("GitHub environment variables are missing!");
 }
 
-function headers() {
-  return {
-    Authorization: `token ${TOKEN}`,
-    'Content-Type': 'application/json',
-    Accept: 'application/vnd.github+json'
-  };
-}
-
-export async function getFile(path) {
-  const url = `${API_ROOT}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(path)}?ref=${BRANCH}`;
-  const res = await fetch(url, { headers: headers() });
-  if (res.status === 200) {
-    const data = await res.json();
-    // content is base64
-    return data;
-  } else {
-    return null;
-  }
-}
-
-export async function createOrUpdateFile(path, contentBase64, message) {
-  // Check if file exists to include sha
-  const existing = await getFile(path);
-  const body = {
-    message,
-    content: contentBase64,
-    branch: BRANCH
-  };
-  if (existing && existing.sha) body.sha = existing.sha;
-  const url = `${API_ROOT}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(path)}`;
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: headers(),
-    body: JSON.stringify(body)
+// Helper function to call GitHub API
+async function githubRequest(path, method = "GET", body = null) {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`, {
+    method,
+    headers: {
+      "Authorization": `token ${GITHUB_TOKEN}`,
+      "Accept": "application/vnd.github.v3+json",
+    },
+    body: body ? JSON.stringify(body) : null,
   });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`GitHub API error: ${res.status} - ${errText}`);
+  }
+
   return res.json();
 }
 
-export async function listDir(path) {
-  const url = `${API_ROOT}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(path)}?ref=${BRANCH}`;
-  const res = await fetch(url, { headers: headers() });
-  if (res.status === 200) return res.json();
-  return null;
+// Save file to GitHub (base64 encoded)
+export async function saveFile(path, content, message = "update from API") {
+  const existing = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`, {
+    headers: { "Authorization": `token ${GITHUB_TOKEN}` }
+  });
+  let sha = null;
+  if (existing.ok) {
+    const json = await existing.json();
+    sha = json.sha;
+  }
+
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `token ${GITHUB_TOKEN}`,
+      "Accept": "application/vnd.github.v3+json",
+    },
+    body: JSON.stringify({
+      message,
+      content: Buffer.from(content).toString("base64"),
+      branch: GITHUB_BRANCH,
+      sha,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to save file: ${res.status} - ${errText}`);
+  }
+
+  return res.json();
+}
+
+// Read file from GitHub
+export async function readFile(path) {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`, {
+    headers: { "Authorization": `token ${GITHUB_TOKEN}` }
+  });
+
+  if (!res.ok) {
+    if (res.status === 404) return null; // File not found
+    const errText = await res.text();
+    throw new Error(`Failed to read file: ${res.status} - ${errText}`);
+  }
+
+  const json = await res.json();
+  return Buffer.from(json.content, "base64").toString("utf-8");
 }
