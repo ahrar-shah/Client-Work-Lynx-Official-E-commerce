@@ -1,5 +1,5 @@
 // Signup: stores user in GitHub under data/users/<email>.json
-import { createOrUpdateFile, getFile } from '../../utils/github_api_client';
+import { createOrUpdateFile, getFile } from '../../utils/functions';
 import { signToken } from '../../../utils/jwt';
 
 export default async function handler(req, res) {
