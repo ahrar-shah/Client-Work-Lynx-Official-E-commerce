@@ -2,7 +2,7 @@
  * GET: list products
  * POST: add product (admin) - expects base64 image, meta (title, category, price, shortDesc)
  */
-import { getFile, listDir, createOrUpdateFile } from '../utils/githubClient';
+import { getFile, listDir, createOrUpdateFile } from '../utils/githubclient';
 import { verifyToken } from '../../utils/jwt';
 
 export default async function handler(req, res) {
