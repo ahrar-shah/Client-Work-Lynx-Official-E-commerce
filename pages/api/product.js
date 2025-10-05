@@ -1,4 +1,4 @@
-import { getFile } from '../utils/githubClient';
+import { getFile } from '../utils/githubclient';
 
 export default async function handler(req, res) {
   const { id } = req.query;
