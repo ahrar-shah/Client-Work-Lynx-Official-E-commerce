@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, token });
   } catch (error) {
-    console.error("Signup error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
+  console.error("Signup error:", error.message, error.stack);
+  return res.status(500).json({ error: error.message || "Internal server error" });
+}
 }
